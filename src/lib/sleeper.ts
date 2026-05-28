@@ -12,6 +12,21 @@ export interface SleeperBracketMatch { r: number; m: number; t1: number; t2: num
 export interface SleeperDraft { draft_id: string; league_id: string; season: string; type: string; status: string; }
 export interface SleeperDraftPick { round: number; roster_id: number; player_id: string; picked_by: string; metadata: { first_name: string; last_name: string; position: string; team: string; }; is_keeper: boolean | null; }
 
+async function getLeagueHistory(currentId: string): Promise<SleeperLeague[]> {
+  const seasons: SleeperLeague[] = [];
+  let id: string | null = currentId;
+  let safety = 0;
+  while (id && safety < 8) {
+    try {
+      const fetched: SleeperLeague = await get<SleeperLeague>(`/league/${id}`, 3600);
+      seasons.push(fetched);
+      id = fetched.previous_league_id ?? null;
+      safety++;
+    } catch { break; }
+  }
+  return seasons;
+}
+
 export const sleeper = {
   getLeague:         (id: string) => get<SleeperLeague>(`/league/${id}`),
   getUsers:          (id: string) => get<SleeperUser[]>(`/league/${id}/users`),
@@ -21,19 +36,5 @@ export const sleeper = {
   getWinnersBracket: (id: string) => get<SleeperBracketMatch[]>(`/league/${id}/winners_bracket`),
   getDrafts:         (id: string) => get<SleeperDraft[]>(`/league/${id}/drafts`),
   getDraftPicks:     (draftId: string) => get<SleeperDraftPick[]>(`/draft/${draftId}/picks`),
-
-  async getLeagueHistory(currentId: string): Promise<SleeperLeague[]> {
-    const seasons: SleeperLeague[] = [];
-    let id: string | null = currentId;
-    let safety = 0;
-    while (id && safety < 8) {
-      try {
-        const league = await get<SleeperLeague>(`/league/${id}`, 3600);
-        seasons.push(league);
-        id = league.previous_league_id ?? null;
-        safety++;
-      } catch { break; }
-    }
-    return seasons;
-  },
+  getLeagueHistory,
 };
